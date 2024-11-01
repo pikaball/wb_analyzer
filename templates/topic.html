@@ -20,6 +20,7 @@
                     <th>uid</th>
                     <th>回复指向</th>
                     <th>时间</th>
+                    <th>情感趋向</th>
                 </tr>
             </thead>
             <tbody>
@@ -30,6 +31,15 @@
                     <td>{{ data.uid }}</td>
                     <td>{{ data.replyto if data.replyto != -1 else '-' }}</td>
                     <td>{{ data.time }}</td>
+                    <td>
+                        <div>{{ data.sentiment }}</div>
+                        <div style="font-size: 0.9em; color: gray;">
+                            正向概率: {{ (data.positive * 100) | round(4) }}%
+                        </div>
+                        <div style="font-size: 0.9em; color: gray;">
+                            负向概率: {{ (data.negative * 100) | round(4) }}%
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
