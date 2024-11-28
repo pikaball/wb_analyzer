@@ -5,10 +5,128 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>主题内容 - {{ topic.content }}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.6.0/chart.min.js"></script>
+    <style>
+        .chart-container {
+            width: 400px;
+            height: 400px;
+        }
+        .fixed-width {
+            width: 100px;
+        }
+        .extend-width {
+            width: 500px;
+        }
+        .wordcloud {
+            max-width: 600px;
+            max-height: 400px;
+        }
+        .positive {
+            background-color: #deeee2;
+        }
+        .neutral {
+            background-color: #fbf1d2;
+        }
+        .negative {
+            background-color: #f8e2e4;
+        }
+    </style>
 </head>
 <body>
     <div class="ui container">
         <h1 class="ui header">热点话题： {{ topic.content }}</h1>
+
+        <h3 class="ui header">情感统计</h3>
+        <div class="ui grid">
+            <div class="eight wide column">
+                <div class="chart-container">
+                    <canvas id="sentimentChart"></canvas>
+                </div>
+            </div>
+            <div class="eight wide column">
+                <table class="ui celled table">
+                    <thead>
+                        <tr>
+                            <th class="fixed-width">情感方向</th>
+                            <th class="fixed-width">数量</th>
+                            <th class="extend-width">代表性评论</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>正向</td>
+                            <td>{{ topic.statistics.pos_count }}</td>
+                            <td>
+                                {% for comment in topic.representative_comments.positive %}
+                                    <p>{{ comment }}</p>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>中立</td>
+                            <td>{{ topic.statistics.mid_count }}</td>
+                            <td>
+                                {% for comment in topic.representative_comments.neutral %}
+                                    <p>{{ comment }}</p>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>负向</td>
+                            <td>{{ topic.statistics.neg_count }}</td>
+                            <td>
+                                {% for comment in topic.representative_comments.negative %}
+                                    <p>{{ comment }}</p>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>总数</td>
+                            <td colspan="2">{{ topic.statistics.topics_count }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <script>
+            var ctx = document.getElementById('sentimentChart').getContext('2d');
+            var sentimentChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['正向', '中立', '负向'],
+                    datasets: [{
+                        data: [{{ topic.statistics.pos_count }}, {{ topic.statistics.mid_count }}, {{ topic.statistics.neg_count }}],
+                        backgroundColor: ['#4CAF50', '#FFC107', '#F44336']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    var total = {{ topic.statistics.topics_count }};
+                                    var value = tooltipItem.raw;
+                                    var percentage = (value / total * 100).toFixed(2);
+                                    return tooltipItem.label + ': ' + value + ' (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        </script>
+
+        <h3 class="ui header">词云图</h3>
+        <div>
+            <img src="/static/wordclouds/{{ topic.tid }}.png" alt="词云图" id="wordcloudImage" class="wordcloud">
+        </div>
+        <div class="ui buttons">
+            <a class="ui button" href="{{ url_for('regenerate_wordcloud', topic=topic.tid) }}">重新生成词云图</a>
+        </div>
 
         <h3 class="ui header">帖文列表</h3>
         {% if datas and datas|length > 0 %}
@@ -18,7 +136,7 @@
                     <th>帖文 ID (mid)</th>
                     <th>内容</th>
                     <th>uid</th>
-                    <th>回复指向</th>
+                    <th class="fixed-width">回复指向</th>
                     <th>时间</th>
                     <th>情感趋向</th>
                 </tr>
@@ -31,7 +149,7 @@
                     <td>{{ data.uid }}</td>
                     <td>{{ data.replyto if data.replyto != -1 else '-' }}</td>
                     <td>{{ data.time }}</td>
-                    <td>
+                    <td class="{% if data.sentiment == '正向' %}positive{% elif data.sentiment == '中立' %}neutral{% else %}negative{% endif %}" >
                         <div>{{ data.sentiment }}</div>
                         <div style="font-size: 0.9em; color: gray;">
                             正向概率: {{ (data.positive * 100) | round(4) }}%
@@ -52,7 +170,6 @@
             <a class="ui button" href="{{ url_for('index') }}">返回首页</a>
         </div>
     </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"></script>
 </body>
